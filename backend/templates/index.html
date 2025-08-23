@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JOM TALK</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<h1 class="title-header">JOM TALK <span class="talk-emoji">🗣️💬</span></h1>
+
+  <!-- ===== Malay Slang Translator ===== -->
+  <section>
+    <h2>📝 Malay Slang Translator</h2>
+    <textarea id="inputText" placeholder="Type Malay slang here..."></textarea>
+    <br>
+    <button id="translateBtn">Translate</button>
+    <button id="recordBtn">🎤 Speak</button>
+    <p><b>Translated:</b> <span id="outputText"></span></p>
+  </section>
+
+  <!-- ===== English → Malay Slang Reply ===== -->
+  <section>
+    <h2>💬 English → Malay Slang Reply</h2>
+    <textarea id="replyInput" placeholder="Type your reply in English..."></textarea>
+    <br>
+    <button onclick="generateReply()">Reply in Malay</button>
+    <p><b>Malay Reply:</b> <span id="replyOutput"></span></p>
+  </section>
+
+  <!-- ===== Play Malay Audio ===== -->
+  <section>
+    <h2>🔊 Play Malay Audio</h2>
+    <button onclick="playTTS()">Play Reply as Audio</button>
+    <br>
+    <audio id="ttsPlayer" controls></audio>
+  </section>
+
+  <!-- ===== Pronunciation Coach ===== -->
+  <section>
+    <h2>🗣️ Pronunciation Coach</h2>
+    <button onclick="startCoach()">🎧 Start Coach</button>
+    <p><b>Target word:</b> <span id="targetWord">---</span></p>
+    <p><b>Coach Result:</b> <span id="coachResult">Waiting...</span></p>
+  </section>
+
+  <script>
+    // ---- TEXT TRANSLATION ----
+    async function doTranslate() {
+      const text = document.getElementById("inputText").value;
+      try {
+        const res = await fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await res.json();
+        if (data.translated) {
+          document.getElementById("outputText").innerText = data.translated;
+        } else {
+          document.getElementById("outputText").innerText = "⚠️ Translation failed";
+        }
+      } catch (err) {
+        document.getElementById("outputText").innerText = "⚠️ Server error";
+      }
+    }
+    document.getElementById("translateBtn").addEventListener("click", doTranslate);
+
+    // ---- SPEECH RECOGNITION ----
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    let isListening = false;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = "ms-MY";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        document.getElementById("recordBtn").innerText = "⏹ Stop";
+      };
+      recognition.onend = () => {
+        document.getElementById("recordBtn").innerText = "🎤 Speak";
+        isListening = false;
+      };
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById("inputText").value = transcript;
+        setTimeout(doTranslate, 100);
+      };
+      recognition.onerror = (event) => {
+        document.getElementById("outputText").innerText = "⚠️ Speech error: " + event.error;
+      };
+    } else {
+      document.getElementById("recordBtn").disabled = true;
+      document.getElementById("recordBtn").innerText = "Speech API not supported";
+    }
+
+    document.getElementById("recordBtn").addEventListener("click", () => {
+      if (!recognition) return;
+      if (!isListening) {
+        recognition.start();
+        isListening = true;
+      } else {
+        recognition.stop();
+        isListening = false;
+      }
+    });
+
+    // ---- REPLY + TTS ----
+    async function generateReply() {
+      const text = document.getElementById("replyInput").value;
+      if (!text.trim()) return alert("⚠️ Please enter some English text first");
+
+      const res = await fetch("/api/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      const reply = data.reply;
+      document.getElementById("replyOutput").innerText = reply;
+
+      // Auto-play TTS
+      try {
+        const ttsRes = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: reply })
+        });
+        if (!ttsRes.ok) return;
+        const blob = await ttsRes.blob();
+        const url = URL.createObjectURL(blob);
+        const player = document.getElementById("ttsPlayer");
+        player.src = url;
+        player.play();
+      } catch {}
+    }
+
+    async function playTTS() {
+      const text = document.getElementById("replyOutput").innerText;
+      if (!text.trim()) return alert("⚠️ No reply to play");
+
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const player = document.getElementById("ttsPlayer");
+      player.src = url;
+      player.play();
+    }
+
+    // ---- Pronunciation Coach ----
+    const slangWords = ["lah", "makan", "lepak", "syok", "terer"];
+
+    async function startCoach() {
+  const replyText = document.getElementById("replyOutput").innerText.trim();
+
+  if (!replyText) {
+    alert("⚠️ Generate a Malay reply first!");
+    return;
+  }
+
+  document.getElementById("targetWord").innerText = replyText;
+  document.getElementById("coachResult").innerText = "🎙️ Speak now...";
+
+  if (!SpeechRecognition) {
+    document.getElementById("coachResult").innerText = "❌ SpeechRecognition not supported";
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "ms-MY"; // Malay
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onresult = (event) => {
+    const spoken = event.results[0][0].transcript.toLowerCase().trim();
+    const target = replyText.toLowerCase().trim();
+
+    if (spoken.includes(target)) {
+      document.getElementById("coachResult").innerText = `✅ Good! You said "${spoken}"`;
+    } else {
+      document.getElementById("coachResult").innerText = `❌ You said "${spoken}", try again.`;
+    }
+  };
+
+  recognition.onerror = (e) => {
+    document.getElementById("coachResult").innerText = "⚠️ Error: " + e.error;
+  };
+
+  recognition.start();
+}
+
+  </script>
+</body>
+</html>

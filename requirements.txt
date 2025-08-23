@@ -1,0 +1,7 @@
+flask
+flask-cors
+openai>=1.3.0 # new SDK style (from openai import OpenAI)
+pydub # for simple audio handling
+gTTS # Malay TTS
+dotenv
+gTTS
