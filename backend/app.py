@@ -7,7 +7,7 @@ import io
 import json
 from utils.translation import translate_text
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 CORS(app)
 
 try:
