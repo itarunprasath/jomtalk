@@ -1,9 +1,24 @@
 
+// {
+//   "lah": "emphasis, friendly tone",
+//   "makan": "eat",
+//   "lepak": "hang out",
+//   "syok": "fun/enjoyable",
+//   "terer": "skillful",
+//   "Makan.":"eat"
+// }
 {
   "lah": "emphasis, friendly tone",
   "makan": "eat",
   "lepak": "hang out",
   "syok": "fun/enjoyable",
   "terer": "skillful",
-  "Makan.":"eat"
+  "jom": "let's",
+  "bro": "bro/friend",
+  "tak": "no/not",
+  "ya": "yes",
+  "baik": "good",
+  "apa khabar": "how are you",
+  "lama tak jumpa": "long time no see"
 }
+

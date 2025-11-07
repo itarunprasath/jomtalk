@@ -158,7 +158,8 @@
     // ---- Pronunciation Coach ----
     const slangWords = ["lah", "makan", "lepak", "syok", "terer"];
 
-    async function startCoach() {
+ 
+  async function startCoach() {
   const replyText = document.getElementById("replyOutput").innerText.trim();
 
   if (!replyText) {
@@ -169,24 +170,38 @@
   document.getElementById("targetWord").innerText = replyText;
   document.getElementById("coachResult").innerText = "🎙️ Speak now...";
 
-  if (!SpeechRecognition) {
+  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
     document.getElementById("coachResult").innerText = "❌ SpeechRecognition not supported";
     return;
   }
 
-  const recognition = new SpeechRecognition();
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   recognition.lang = "ms-MY"; // Malay
   recognition.continuous = false;
   recognition.interimResults = false;
 
-  recognition.onresult = (event) => {
-    const spoken = event.results[0][0].transcript.toLowerCase().trim();
-    const target = replyText.toLowerCase().trim();
+  recognition.onresult = async (event) => {
+    const spoken = event.results[0][0].transcript.trim();
 
-    if (spoken.includes(target)) {
-      document.getElementById("coachResult").innerText = `✅ Good! You said "${spoken}"`;
-    } else {
-      document.getElementById("coachResult").innerText = `❌ You said "${spoken}", try again.`;
+    // Send target + spoken input to backend for scoring
+    try {
+      const res = await fetch("/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target: replyText,
+          user_input: spoken
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById("coachResult").innerText = `✅ Good pronunciation! You said: "${spoken}"\nScore: ${data.overall_score}%`;
+      } else {
+        document.getElementById("coachResult").innerText = `❌ Try again. You said: "${spoken}". Score: ${data.overall_score}%`;
+      }
+    } catch (err) {
+      document.getElementById("coachResult").innerText = "⚠️ Server error: " + err;
     }
   };
 
@@ -197,6 +212,6 @@
   recognition.start();
 }
 
-  </script>
+</script>
 </body>
 </html>
